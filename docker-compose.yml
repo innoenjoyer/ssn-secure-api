@@ -1,0 +1,26 @@
+services:
+  hydra:
+    image: oryd/hydra:v2.2.0
+    command: serve all --dev
+    environment:
+      DSN: memory
+      SECRETS_SYSTEM: test-secret
+      URLS_SELF_ISSUER: http://hydra:4444
+      STRATEGIES_ACCESS_TOKEN: ${TOKEN_STRATEGY:-jwt}
+      TTL_ACCESS_TOKEN: ${TOKEN_TTL:-5m}
+    networks: [internal]
+
+  hydra-init:
+    image: oryd/hydra:v2.2.0
+    command: >
+      create client --endpoint http://hydra:4445
+      --grant-type client_credentials
+      --scope read,write
+      --format json
+    restart: on-failure
+    depends_on: [hydra]
+    networks: [internal]
+
+networks:
+  internal:
+    internal: true
