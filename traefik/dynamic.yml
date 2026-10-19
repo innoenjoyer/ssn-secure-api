@@ -1,0 +1,69 @@
+http:
+  routers:
+    oauth:
+      rule: "Path(`/oauth2/token`) || Path(`/oauth2/revoke`)"
+      entryPoints: [web]
+      middlewares: [waf, limit-strict]
+      service: hydra-public
+
+    login:
+      rule: "Path(`/login`)"
+      entryPoints: [web]
+      middlewares: [waf, limit-strict]
+      service: api
+
+    api-jwt:
+      rule: "PathPrefix(`/jwt/api`)"
+      entryPoints: [web]
+      middlewares: [waf, limit-api, auth-jwt, strip-mode]
+      service: api
+
+    api-introspect:
+      rule: "PathPrefix(`/introspect/api`)"
+      entryPoints: [web]
+      middlewares: [waf, limit-api, auth-introspect, strip-mode]
+      service: api
+
+  middlewares:
+    waf:
+      plugin:
+        coraza:
+          directives:
+            - Include @coraza.conf-recommended
+            - Include @crs-setup.conf.example
+            - Include @owasp_crs/*.conf
+            - SecRuleEngine On
+
+    limit-strict:
+      rateLimit:
+        average: 5
+        period: 1m
+        burst: 5
+
+    limit-api:
+      rateLimit:
+        average: 20
+        period: 1s
+        burst: 40
+
+    auth-jwt:
+      forwardAuth:
+        address: http://authz:8000/verify/jwt
+        authResponseHeaders: [X-Client-Id, X-Scopes]
+
+    auth-introspect:
+      forwardAuth:
+        address: http://authz:8000/verify/introspect
+        authResponseHeaders: [X-Client-Id, X-Scopes]
+
+    strip-mode:
+      stripPrefix:
+        prefixes: ["/jwt", "/introspect"]
+
+  services:
+    api:
+      loadBalancer:
+        servers: [{ url: "http://api:8000" }]
+    hydra-public:
+      loadBalancer:
+        servers: [{ url: "http://hydra:4444" }]

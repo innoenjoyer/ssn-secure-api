@@ -1,4 +1,15 @@
 services:
+  traefik:
+    image: traefik:v3.1
+    ports:
+      - "8080:80"
+      - "8081:8080"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    networks: [edge, internal]
+    depends_on: [api, authz, hydra]
+
   hydra:
     image: oryd/hydra:v2.2.0
     command: serve all --dev
@@ -21,6 +32,18 @@ services:
     depends_on: [hydra]
     networks: [internal]
 
+  authz:
+    build: ./authz
+    environment:
+      HYDRA_PUBLIC: http://hydra:4444
+      HYDRA_ADMIN: http://hydra:4445
+    networks: [internal]
+
+  api:
+    build: ./api
+    networks: [internal]
+
 networks:
+  edge: {}
   internal:
     internal: true
