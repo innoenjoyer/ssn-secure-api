@@ -15,7 +15,7 @@ docker compose up -d
 Get Hydra `client_id` & `client_secret`:
 
 ```bash
-creds=$(docker compose logs hydra-init --no-log-prefix)
+creds=$(docker compose logs hydra-init --no-log-prefix | tail -1)
 export CID=$(jq -r .client_id <<<"$creds")
 export CSECRET=$(jq -r .client_secret <<<"$creds")
 ```
@@ -38,7 +38,7 @@ curl -G -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/jwt/api/search
 ```
 
-Baseline: drop `waf` / `limit-*` from the middleware chains in `traefik/dynamic.yml`.
+Baseline: Drop `SecRuleEngine` directive from the `waf` middleware in `traefik/dynamic.yml`.
 
 ### Brute force
 
